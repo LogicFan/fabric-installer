@@ -27,6 +27,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -46,6 +47,7 @@ import java.util.zip.ZipOutputStream;
 
 import mjson.Json;
 
+import net.fabricmc.installer.Main;
 import net.fabricmc.installer.util.InstallerProgress;
 import net.fabricmc.installer.util.Library;
 import net.fabricmc.installer.util.Reference;
@@ -65,7 +67,13 @@ public class ServerInstaller {
 
 		progress.updateProgress(Utils.BUNDLE.getString("progress.download.libraries"));
 
-		URL profileUrl = new URL(Reference.getMetaServerEndpoint(String.format("v2/versions/loader/%s/%s/server/json", gameVersion, loaderVersion)));
+
+		URL profileUrl;
+		if (Main.isLocal) {
+			profileUrl = Paths.get("server.json").toUri().toURL();
+		} else {
+			profileUrl = new URL(Reference.getMetaServerEndpoint(String.format("v2/versions/loader/%s/%s/server/json", gameVersion, loaderVersion)));
+		}
 		Json json = Json.read(Utils.readTextFile(profileUrl));
 
 		List<Path> libraryFiles = new ArrayList<>();
@@ -75,14 +83,20 @@ public class ServerInstaller {
 			Library library = new Library(libraryJson);
 
 			progress.updateProgress(new MessageFormat(Utils.BUNDLE.getString("progress.download.library.entry")).format(new Object[]{library.name}));
-			Path libraryFile = libsDir.resolve(library.getFileName());
-			Utils.downloadFile(new URL(library.getURL()), libraryFile);
+			Path libraryFile;
+			if (library.name.matches("net\\.fabricmc:fabric-loader:.*") && Main.isLocal) {
+				libraryFile = Paths.get("fabric-loader.jar");
+			} else {
+				libraryFile = libsDir.resolve(library.getFileName());
+				Utils.downloadFile(new URL(library.getURL()), libraryFile);
+			}
 			libraryFiles.add(libraryFile);
 
 			if (library.name.matches("net\\.fabricmc:fabric-loader:.*")) {
 				JarFile jarFile = new JarFile(libraryFile.toFile());
 				Manifest manifest = jarFile.getManifest();
 				mainClassManifest = manifest.getMainAttributes().getValue("Main-Class");
+				System.out.println("get = " + mainClassManifest);
 			}
 		}
 
@@ -90,6 +104,7 @@ public class ServerInstaller {
 
 		final String DEFAULT_MAIN_CLASS_MANIFEST = "net.fabricmc.loader.launch.server.FabricServerLauncher";
 		mainClassManifest = (mainClassManifest == null) ? DEFAULT_MAIN_CLASS_MANIFEST : mainClassManifest;
+		System.out.println("actual = " + mainClassManifest);
 
 		Path launchJar = dir.resolve("fabric-server-launch.jar");
 		String mainClassMeta = json.at("mainClass").asString();

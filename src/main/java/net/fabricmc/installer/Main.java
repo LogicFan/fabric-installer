@@ -25,6 +25,8 @@ import net.fabricmc.installer.util.Reference;
 
 import java.awt.*;
 import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,6 +36,7 @@ public class Main {
 	public static MetaHandler LOADER_META;
 
 	public static final List<Handler> HANDLERS = new ArrayList<>();
+	public static boolean isLocal = false;
 
 	public static void main(String[] args) throws IOException {
 		System.out.println("Loading Fabric Installer: " + Main.class.getPackage().getImplementationVersion());
@@ -47,8 +50,15 @@ public class Main {
 		//Can be used if you wish to re-host or provide custom versions. Ensure you include the trailing /
 		argumentParser.ifPresent("metaurl", s -> Reference.metaServerUrl = s);
 
-		GAME_VERSION_META = new MetaHandler(Reference.getMetaServerEndpoint("v2/versions/game"));
-		LOADER_META = new MetaHandler(Reference.getMetaServerEndpoint("v2/versions/loader"));
+		isLocal = argumentParser.has("local");
+
+		if (isLocal) {
+			GAME_VERSION_META = new MetaHandler(Paths.get("game.json").toUri().toURL());
+			LOADER_META = new MetaHandler(Paths.get("loader.json").toUri().toURL());
+		} else {
+			GAME_VERSION_META = new MetaHandler(new URL(Reference.getMetaServerEndpoint("v2/versions/game")));
+			LOADER_META = new MetaHandler(new URL(Reference.getMetaServerEndpoint("v2/versions/loader")));
+		}
 
 		//Default to the help command in a headless environment
 		if(GraphicsEnvironment.isHeadless() && command == null){

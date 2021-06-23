@@ -26,15 +26,15 @@ import java.util.stream.Collectors;
 
 public class MetaHandler extends CompletableHandler<List<MetaHandler.GameVersion>> {
 
-	private final String metaUrl;
+	private final URL metaUrl;
 	private List<GameVersion> versions;
 
-	public MetaHandler(String url) {
+	public MetaHandler(URL url) {
 		this.metaUrl = url;
 	}
 
 	public void load() throws IOException {
-		URL url = new URL(metaUrl);
+		URL url = metaUrl;
 
 		Json json = Json.read(Utils.readTextFile(url));
 
