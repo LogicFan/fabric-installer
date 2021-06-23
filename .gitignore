@@ -5,6 +5,7 @@
 !/gradle
 !/src
 !/.github
+!/sample.json
 
 # Files
 !/.gitignore
